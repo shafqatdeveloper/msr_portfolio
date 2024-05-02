@@ -1,57 +1,35 @@
 "use client";
 // @flow strict
-import { isValidEmail } from '@/utils/check-email';
-import emailjs from '@emailjs/browser';
-import { useState } from 'react';
+import { isValidEmail } from "@/utils/check-email";
+import { useState } from "react";
 import { TbMailForward } from "react-icons/tb";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
+import Loader from "../../Loader/Loader";
 
 function ContactWithoutCaptcha() {
-  const [input, setInput] = useState({
-    name: '',
-    email: '',
-    message: '',
-  });
-  const [error, setError] = useState({
-    email: false,
-    required: false,
-  });
-
-  const checkRequired = () => {
-    if (input.email && input.message && input.name) {
-      setError({ ...error, required: false });
-    }
-  };
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSendMail = async (e) => {
     e.preventDefault();
-    if (!input.email || !input.message || !input.name) {
-      setError({ ...error, required: true });
-      return;
-    } else if (error.email) {
-      return;
-    } else {
-      setError({ ...error, required: false });
-    };
-
-    const serviceID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
-    const templateID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
-    const options = { publicKey: process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY };
-
+    setIsLoading(true);
     try {
-      const res = await emailjs.send(serviceID, templateID, input, options);
-
+      const res = await fetch("/api/contact/chat", {
+        method: "POST",
+        body: JSON.stringify({ name, email, message }),
+      });
       if (res.status === 200) {
-        toast.success('Message sent successfully!');
-        setInput({
-          name: '',
-          email: '',
-          message: '',
-        });
-      };
+        toast.success("Message sent successfully!");
+        setName("");
+        setEmail("");
+        setMessage("");
+      }
     } catch (error) {
       toast.error(error?.text || error);
-    };
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -61,7 +39,9 @@ function ContactWithoutCaptcha() {
       </p>
       <div className="max-w-3xl text-white rounded-lg border border-[#464c6a] p-3 lg:p-5">
         <p className="text-sm text-[#d3d8e8]">
-          {"If you have any questions or concerns, please don't hesitate to contact me. I am open to any work opportunities that align with my skills and interests."}
+          {
+            "If you have any questions or concerns, please don't hesitate to contact me. I am open to any work opportunities that align with my skills and interests."
+          }
         </p>
         <div className="mt-6 flex flex-col gap-4">
           <div className="flex flex-col gap-2">
@@ -71,9 +51,8 @@ function ContactWithoutCaptcha() {
               type="text"
               maxLength="100"
               required={true}
-              onChange={(e) => setInput({ ...input, name: e.target.value })}
-              onBlur={checkRequired}
-              value={input.name}
+              onChange={(e) => setName(e.target.value)}
+              value={name}
             />
           </div>
 
@@ -84,16 +63,9 @@ function ContactWithoutCaptcha() {
               type="email"
               maxLength="100"
               required={true}
-              value={input.email}
-              onChange={(e) => setInput({ ...input, email: e.target.value })}
-              onBlur={() => {
-                checkRequired();
-                setError({ ...error, email: !isValidEmail(input.email) });
-              }}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
-            {error.email &&
-              <p className="text-sm text-red-400">Please provide a valid email!</p>
-            }
           </div>
 
           <div className="flex flex-col gap-2">
@@ -103,31 +75,34 @@ function ContactWithoutCaptcha() {
               maxLength="500"
               name="message"
               required={true}
-              onChange={(e) => setInput({ ...input, message: e.target.value })}
-              onBlur={checkRequired}
+              onChange={(e) => setMessage(e.target.value)}
               rows="4"
-              value={input.message}
+              value={message}
             />
           </div>
           <div className="flex flex-col items-center gap-2">
-            {error.required &&
-              <p className="text-sm text-red-400">
-                Email and Message are required!
-              </p>
-            }
             <button
-              className="flex items-center gap-1 hover:gap-3 rounded-full bg-gradient-to-r from-pink-500 to-violet-600 px-5 md:px-12 py-2.5 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider text-white no-underline transition-all duration-200 ease-out hover:text-white hover:no-underline md:font-semibold"
+              className="flex items-center gap-1 hover:gap-3 rounded-full bg-gradient-to-r w-72 h-12 justify-center from-pink-500 to-violet-600 px-5 md:px-12 py-2.5 md:py-3 text-center text-xs md:text-sm font-medium uppercase tracking-wider text-white no-underline transition-all duration-200 ease-out hover:text-white hover:no-underline md:font-semibold"
               role="button"
+              disabled={
+                name === "" || email === "" || message === "" ? true : false
+              }
               onClick={handleSendMail}
             >
-              <span>Send Message</span>
-              <TbMailForward className="mt-1" size={18} />
+              {isLoading ? (
+                <Loader />
+              ) : (
+                <>
+                  <span>Send Message</span>
+                  <TbMailForward className="mt-1" size={18} />
+                </>
+              )}
             </button>
           </div>
         </div>
       </div>
     </div>
   );
-};
+}
 
 export default ContactWithoutCaptcha;
